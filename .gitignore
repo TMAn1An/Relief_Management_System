@@ -1,0 +1,28 @@
+# Ignore sensitive and system files
+config/db_connect.php
+
+# Ignore upload directories (contains user photos and sensitive data)
+uploads/*
+!uploads/.gitkeep
+
+# System and editor files
+*.log
+.DS_Store
+Thumbs.db
+.env
+.idea/
+.vscode/
+node_modules/
+vendor/
+*.bak
+*.tmp
+*.temp
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# PHP specific
+composer.lock
+vendor/

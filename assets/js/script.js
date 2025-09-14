@@ -3,7 +3,7 @@ function printCard(cardId) {
     const cardElement = document.getElementById(cardId);
     const printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Print Relief Card</title>');
-    printWindow.document.write('<link rel="stylesheet" href="/NEW_Project/assets/css/style.css">');
+    printWindow.document.write('<link rel="stylesheet" href="/Relief/assets/css/style.css">');
     printWindow.document.write('</head><body>');
     printWindow.document.write(cardElement.innerHTML);
     printWindow.document.write('</body></html>');

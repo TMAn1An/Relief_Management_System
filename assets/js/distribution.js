@@ -11,8 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const distributionId = form.querySelector('input[name="distribution_id"]')?.value;
 
             const url = isEditing 
-                ? '/NEW_Project/ajax/update_distribution.php'
-                : '/NEW_Project/ajax/add_distribution.php';
+                ? '/Relief/ajax/update_distribution.php'
+                : '/Relief/ajax/add_distribution.php';
 
             fetch(url, {
                 method: 'POST',

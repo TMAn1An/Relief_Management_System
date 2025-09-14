@@ -1,6 +1,6 @@
 <?php include 'includes/header.php'; ?>
 
-<section class="hero" style="background-image: linear-gradient(135deg, rgba(26, 35, 126, 0.85), rgba(57, 73, 171, 0.85)), url('/NEW_Project/uploads/hero_section.jpg');">
+<section class="hero" style="background-image: linear-gradient(135deg, rgba(26, 35, 126, 0.85), rgba(57, 73, 171, 0.85)), url('/Relief/uploads/hero_section.jpg');">
     <div class="hero-content animate-fade-in">
         <h1>RELIEF MANAGEMENT SYSTEM</h1>
         <p>Empowering communities through efficient relief distribution and support management</p>

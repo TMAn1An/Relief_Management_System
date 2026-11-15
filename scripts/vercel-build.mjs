@@ -1,19 +1,19 @@
-// Vercel build: generate client, apply migrations + seed the admin when a database is attached, then build.
+// Vercel build: generate the Prisma client, migrate + seed Turso when configured, then build.
 import { spawnSync } from "node:child_process";
 
-const run = (cmd, args) => {
-  const r = spawnSync(cmd, args, { stdio: "inherit", shell: process.platform === "win32" });
+const run = (cmd, args, env = {}) => {
+  const r = spawnSync(cmd, args, { stdio: "inherit", env: { ...process.env, ...env }, shell: process.platform === "win32" });
   if (r.status !== 0) process.exit(r.status ?? 1);
 };
 
-// Neon's Vercel integration provides DATABASE_URL (pooled) and DATABASE_URL_UNPOOLED; Prisma reads DATABASE_URL.
-run("npx", ["prisma", "generate"]);
+// The Prisma schema reads DATABASE_URL; generating the client doesn't need a real database.
+run("npx", ["prisma", "generate"], { DATABASE_URL: process.env.DATABASE_URL || "file:./dev.db" });
 
-if (process.env.DATABASE_URL) {
-  run("npx", ["prisma", "migrate", "deploy"]);
+if (process.env.TURSO_DATABASE_URL) {
+  run("node", ["scripts/migrate-turso.mjs"]);
   if (process.env.SEED_ADMIN_EMAIL && process.env.SEED_ADMIN_PASSWORD) run("npx", ["tsx", "prisma/seed.ts"]);
 } else {
-  console.warn("⚠ DATABASE_URL is not set — skipping migrations. Attach a Postgres database and redeploy.");
+  console.warn("⚠ TURSO_DATABASE_URL is not set — skipping migrations. The app needs a database to work.");
 }
 
 run("npx", ["next", "build"]);

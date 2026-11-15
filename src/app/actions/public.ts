@@ -1,14 +1,12 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { isUniqueViolation } from "@/lib/db-errors";
 import { audit } from "@/lib/audit";
 import { readPhoto } from "@/lib/photo";
 import { nextPeriodStart, periodOf } from "@/lib/period";
 import { flattenErrors, recipientSchema, verifySchema, keepInput, type ActionState } from "@/lib/validation";
 import type { Category, Status } from "@prisma/client";
-
-const isUniqueViolation = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
 
 export async function registerRecipient(prev: ActionState<{ nid: string }>, formData: FormData): Promise<ActionState<{ nid: string }>> {
   return keepInput(await registerRecipientImpl(prev, formData), formData);

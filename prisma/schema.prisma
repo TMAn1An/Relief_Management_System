@@ -109,3 +109,11 @@ model AuditLog {
 
   @@index([createdAt])
 }
+
+/// Fixed-window counters for rate limiting. Kept in the database because serverless
+/// instances share no memory. `resetAt` is epoch milliseconds.
+model RateLimit {
+  key     String @id
+  count   Int
+  resetAt BigInt
+}

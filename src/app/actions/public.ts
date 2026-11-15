@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/db-errors";
 import { audit } from "@/lib/audit";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { readPhoto } from "@/lib/photo";
 import { nextPeriodStart, periodOf } from "@/lib/period";
 import { flattenErrors, recipientSchema, verifySchema, keepInput, type ActionState } from "@/lib/validation";
@@ -13,6 +14,8 @@ export async function registerRecipient(prev: ActionState<{ nid: string }>, form
 }
 
 async function registerRecipientImpl(_: ActionState<{ nid: string }>, formData: FormData): Promise<ActionState<{ nid: string }>> {
+  const blocked = await rateLimit("register-ip", await clientIp(), 5, 60 * 60);
+  if (blocked) return { message: blocked };
   const parsed = recipientSchema.safeParse(Object.fromEntries(formData));
   const photo = await readPhoto(formData.get("photo"), true);
   const errors = parsed.success ? {} : flattenErrors(parsed.error);
@@ -47,6 +50,13 @@ async function findVerified(nid: string, phone: string) {
   return recipient && recipient.phone === phone ? recipient : null;
 }
 
+/** NID + phone lookups are the brute-force target: limit per IP and per NID. */
+async function guardVerification(nid: string | null) {
+  const byIp = await rateLimit("verify-ip", await clientIp(), 10, 15 * 60);
+  if (byIp) return byIp;
+  return nid ? rateLimit("verify-nid", nid, 10, 15 * 60) : null;
+}
+
 const NOT_FOUND = "We couldn't find a recipient matching that NID and phone number.";
 
 export async function lookupStatus(prev: ActionState<StatusLookup>, formData: FormData): Promise<ActionState<StatusLookup>> {
@@ -55,6 +65,8 @@ export async function lookupStatus(prev: ActionState<StatusLookup>, formData: Fo
 
 async function lookupStatusImpl(_: ActionState<StatusLookup>, formData: FormData): Promise<ActionState<StatusLookup>> {
   const parsed = verifySchema.safeParse(Object.fromEntries(formData));
+  const blocked = await guardVerification(parsed.success ? parsed.data.nid : null);
+  if (blocked) return { message: blocked };
   if (!parsed.success) return { errors: flattenErrors(parsed.error) };
   const recipient = await findVerified(parsed.data.nid, parsed.data.phone);
   if (!recipient) return { message: NOT_FOUND };
@@ -85,6 +97,8 @@ async function submitMonthlyRequestImpl(
   formData: FormData,
 ): Promise<ActionState<{ nextRequestAt: string }>> {
   const parsed = verifySchema.safeParse(Object.fromEntries(formData));
+  const blocked = await guardVerification(parsed.success ? parsed.data.nid : null);
+  if (blocked) return { message: blocked };
   if (!parsed.success) return { errors: flattenErrors(parsed.error) };
   const recipient = await findVerified(parsed.data.nid, parsed.data.phone);
   if (!recipient) return { message: NOT_FOUND };

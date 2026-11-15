@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HeartHandshake, LayoutDashboard, Users, ClipboardCheck, Package, BarChart3, LogOut } from "lucide-react";
+import { HeartHandshake, LayoutDashboard, Users, ClipboardCheck, Package, BarChart3, LogOut, UserCog } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { db } from "@/lib/db";
@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/approvals", label: "Approvals", icon: ClipboardCheck, badge: pending },
     { href: "/admin/distributions", label: "Distributions", icon: Package },
     { href: "/admin/statistics", label: "Statistics", icon: BarChart3 },
+    { href: "/admin/account", label: "Account", icon: UserCog },
   ];
 
   return (
@@ -38,8 +39,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           ))}
         </nav>
         <div className="mt-auto hidden border-t border-line p-4 lg:absolute lg:bottom-0 lg:block lg:w-[250px]">
-          <p className="truncate text-sm font-semibold">{user.name}</p>
-          <p className="truncate text-xs text-muted">{user.email} · {user.role === "ADMIN" ? "Admin" : "Staff"}</p>
+          <Link href="/admin/account" className="block rounded-lg hover:bg-slate-50" title="Account settings">
+            <p className="truncate text-sm font-semibold">{user.name}</p>
+            <p className="truncate text-xs text-muted">{user.email} · {user.role === "ADMIN" ? "Admin" : "Staff"}</p>
+          </Link>
           <form action={logout} className="mt-3">
             <button className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-red-700"><LogOut className="h-4 w-4" aria-hidden /> Sign out</button>
           </form>

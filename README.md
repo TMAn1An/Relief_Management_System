@@ -19,6 +19,7 @@ A web application for running a relief program for **widows, the elderly and peo
 - Distributions: one record per item per recipient per month
 - Statistics: 12-month request chart and per-category breakdown
 - Audit log of every sensitive action; admin-only deletes
+- Account page: change your own password (current password required)
 
 ## Business rules (enforced in the database, not just the UI)
 
@@ -65,7 +66,7 @@ Turso is accessed over HTTPS through Prisma's libSQL adapter, so no native modul
 - Uploads are checked by size, declared type **and** magic bytes; photos are only served to signed-in staff
 - Security headers set in `next.config.ts`
 
-Known limitations: no rate limiting on the public forms or login (add one at your CDN/WAF or with Upstash), and no password-reset flow (admins are created via seed).
+Staff can change their own password under **Account**. Known limitations: no rate limiting on the public forms or login (add one at your CDN/WAF or with Upstash), and no *forgotten*-password reset flow (admins are created via seed).
 
 ---
 

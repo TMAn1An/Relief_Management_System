@@ -1,6 +1,7 @@
 "use server";
 
 import type { Status } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -11,6 +12,7 @@ import { readPhoto } from "@/lib/photo";
 import { periodOf } from "@/lib/period";
 import { STATUSES } from "@/lib/labels";
 import {
+  changePasswordSchema,
   distributionSchema,
   flattenErrors,
   normalizeItem,
@@ -128,4 +130,23 @@ export async function deleteDistribution(id: string) {
   const d = await db.distribution.delete({ where: { id } });
   await audit(user.id, "DISTRIBUTION_DELETED", "Distribution", id, `${d.itemName}`);
   revalidatePath("/admin", "layout");
+}
+
+export async function changePassword(prev: ActionState, formData: FormData): Promise<ActionState> {
+  return keepInput(await changePasswordImpl(prev, formData), formData);
+}
+
+async function changePasswordImpl(_: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = changePasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { errors: flattenErrors(parsed.error) };
+
+  const row = await db.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
+  if (!row || !(await bcrypt.compare(parsed.data.currentPassword, row.passwordHash))) {
+    return { errors: { currentPassword: ["Your current password is incorrect"] } };
+  }
+
+  await db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 12) } });
+  await audit(user.id, "PASSWORD_CHANGED", "User", user.id);
+  return { ok: true, message: "Your password has been updated." };
 }

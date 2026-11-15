@@ -25,3 +25,23 @@ describe("verifySchema / distributionSchema", () => {
     expect(normalizeItem("  Rice   (KG) ")).toBe("rice (kg)");
   });
 });
+
+import { changePasswordSchema } from "./validation";
+
+describe("changePasswordSchema", () => {
+  const ok = { currentPassword: "old-password", newPassword: "new-password-1", confirmPassword: "new-password-1" };
+  it("accepts a valid change", () => expect(changePasswordSchema.safeParse(ok).success).toBe(true));
+  it("rejects short passwords", () => {
+    expect(changePasswordSchema.safeParse({ ...ok, newPassword: "short", confirmPassword: "short" }).success).toBe(false);
+  });
+  it("rejects mismatched confirmation", () => {
+    expect(changePasswordSchema.safeParse({ ...ok, confirmPassword: "different-one" }).success).toBe(false);
+  });
+  it("rejects reusing the current password", () => {
+    expect(changePasswordSchema.safeParse({ ...ok, newPassword: "old-password", confirmPassword: "old-password" }).success).toBe(false);
+  });
+  it("rejects passwords over bcrypt's 72-byte limit", () => {
+    const long = "a".repeat(73);
+    expect(changePasswordSchema.safeParse({ ...ok, newPassword: long, confirmPassword: long }).success).toBe(false);
+  });
+});

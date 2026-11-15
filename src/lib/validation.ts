@@ -36,6 +36,22 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Enter your password"),
 });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password"),
+    // bcrypt only uses the first 72 bytes, so longer passwords would be silently truncated.
+    newPassword: z
+      .string()
+      .min(8, "Use at least 8 characters")
+      .refine((v) => new TextEncoder().encode(v).length <= 72, "Use at most 72 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords don't match" })
+  .refine((v) => v.newPassword !== v.currentPassword, {
+    path: ["newPassword"],
+    message: "Choose a password different from your current one",
+  });
+
 export const PHOTO_MAX_BYTES = 500 * 1024;
 export const PHOTO_TYPES = ["image/jpeg", "image/png"] as const;
 
@@ -54,7 +70,7 @@ export type ActionState<T = undefined> = {
 
 export function valuesOf(formData: FormData): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const [k, v] of formData.entries()) if (typeof v === "string" && !k.startsWith("$ACTION") && k !== "password") out[k] = v;
+  for (const [k, v] of formData.entries()) if (typeof v === "string" && !k.startsWith("$ACTION") && !/password/i.test(k)) out[k] = v;
   return out;
 }
 

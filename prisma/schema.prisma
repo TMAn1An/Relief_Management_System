@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  WIDOW
+  ELDERLY
+  DISABLED
+}
+
+enum Status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         Role       @default(STAFF)
+  createdAt    DateTime   @default(now())
+  auditLogs    AuditLog[]
+}
+
+model Recipient {
+  id            String          @id @default(cuid())
+  nid           String          @unique
+  name          String
+  phone         String
+  age           Int
+  category      Category
+  status        Status          @default(PENDING)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  photo         RecipientPhoto?
+  card          ReliefCard?
+  requests      ReliefRequest[]
+  distributions Distribution[]
+
+  @@index([status])
+  @@index([category])
+  @@index([name])
+}
+
+/// Photos live in the database so the app stays portable (no writable disk needed).
+model RecipientPhoto {
+  recipientId String    @id
+  data        Bytes
+  mime        String
+  updatedAt   DateTime  @updatedAt
+  recipient   Recipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+model ReliefCard {
+  cardNo      Int       @id @default(autoincrement())
+  recipientId String    @unique
+  issuedAt    DateTime  @default(now())
+  recipient   Recipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+/// One request per recipient per calendar month (period = "YYYY-MM", Asia/Dhaka).
+model ReliefRequest {
+  id          String    @id @default(cuid())
+  recipientId String
+  period      String
+  createdAt   DateTime  @default(now())
+  recipient   Recipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([recipientId, period])
+  @@index([period])
+}
+
+/// The same item can be given to a recipient only once per month.
+model Distribution {
+  id            String    @id @default(cuid())
+  recipientId   String
+  itemName      String
+  itemKey       String
+  quantity      Decimal   @db.Decimal(10, 2)
+  period        String
+  distributedAt DateTime  @default(now())
+  recipient     Recipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([recipientId, itemKey, period])
+  @@index([period])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}

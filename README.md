@@ -1,90 +1,80 @@
 # Relief Management System
 
-A comprehensive web-based relief management system built with PHP and MySQL for managing recipients, distributions, and monthly relief requests.
+A web application for running a relief program for **widows, the elderly and people with disabilities**: public applications, staff review and approval, relief cards, monthly requests, item distribution and reporting.
+
+> **v2** is a full rewrite of the original PHP/MySQL university project (see git history for v1). It adds authentication, role-based access, database-enforced business rules, a responsive UI and a deployable Node stack.
 
 ## Features
 
-- **Recipient Management**: Register, edit, and manage relief recipients
-- **Distribution Tracking**: Track and manage relief distributions
-- **Monthly Requests**: Handle monthly relief requests with countdown timer
-- **Professional Cards**: Generate printable relief cards
-- **Search & Filter**: Advanced search and filtering capabilities
-- **Statistics**: Monthly statistics and reporting
-- **Responsive Design**: Works on desktop and laptop screens
+**Public** (no login)
+- Apply for relief with NID, phone and photo, with validation and clear errors that keep what you typed
+- Check application status (verified with NID **and** phone — no NID enumeration)
+- Submit one monthly request, with a live countdown to the next eligible date
 
-## System Requirements
+**Staff / Admin** (login required)
+- Dashboard with live counts and recent applications
+- Recipients: search, filter by status/category, pagination, edit, photo replacement
+- Approvals queue — approving issues a numbered relief card automatically
+- Printable relief cards (print stylesheet included)
+- Distributions: one record per item per recipient per month
+- Statistics: 12-month request chart and per-category breakdown
+- Audit log of every sensitive action; admin-only deletes
 
-- PHP 7.4 or higher
-- MySQL 5.7 or higher
-- Apache/Nginx web server
-- Modern web browser
+## Business rules (enforced in the database, not just the UI)
 
-## Installation
+| Rule | How |
+| --- | --- |
+| One request per recipient per month | `UNIQUE (recipientId, period)` |
+| Same item once per recipient per month (case/spacing-insensitive) | `UNIQUE (recipientId, itemKey, period)` |
+| Only approved recipients can request or receive items | checked in server actions |
+| Elderly recipients must be 60+ | zod schema |
+| Months follow Bangladesh time (Asia/Dhaka) | `src/lib/period.ts` (unit-tested) |
 
-1. Clone this repository to your web server directory
-2. Import the database schema from `db/schema.sql`
-3. Configure database connection in `config/db_connect.php`
-4. Set up proper permissions for the `uploads/` directory
-5. Access the application through your web browser
+## Stack
 
-## Database Setup
+Next.js 15 (App Router, Server Actions) · TypeScript · Tailwind CSS 4 · Prisma 6 · PostgreSQL · zod · jose + bcrypt for sessions
 
-```sql
--- Create database
-CREATE DATABASE relief_management;
+## Getting started
 
--- Import the schema
-mysql -u username -p relief_management < db/schema.sql
+```bash
+cp .env.example .env          # then edit DATABASE_URL and SESSION_SECRET
+npm install
+npx prisma migrate dev        # creates the schema
+npm run db:seed               # creates the first admin from SEED_ADMIN_* values
+npm run dev                   # http://localhost:3000
 ```
 
-## Configuration
+Sign in at `/login` with the seeded admin account, then **change the seed password** before going live.
 
-Update `config/db_connect.php` with your database credentials:
+## Deploying (e.g. Vercel + Neon/Supabase)
 
-```php
-$servername = "localhost";
-$username = "your_username";
-$password = "your_password";
-$dbname = "relief_management";
-```
+1. Create a PostgreSQL database and copy its connection string.
+2. Set `DATABASE_URL` and `SESSION_SECRET` (`openssl rand -base64 32`) as environment variables.
+3. Run migrations once: `npx prisma migrate deploy`, then `npm run db:seed`.
+4. Deploy. The build script runs `prisma generate` automatically.
 
-## Usage
+Photos are stored in the database (≤ 500 KB each), so no writable disk or object storage is required.
 
-1. **Registration**: Add new recipients through the registration form
-2. **Recipients**: View, search, and edit recipient information
-3. **Distribution**: Manage relief distributions and track inventory
-4. **Monthly Requests**: Handle monthly relief requests
-5. **Statistics**: View distribution statistics and reports
+## Scripts
 
-## Security Features
+`dev` · `build` · `start` · `lint` · `typecheck` · `test` · `db:migrate` · `db:deploy` · `db:seed`
 
-- Input validation and sanitization
-- SQL injection prevention
-- File upload security
-- Session management
-- CSRF protection
+## Security notes
 
-## File Structure
+- All queries go through Prisma (parameterised); inputs are validated with zod on the server
+- Sessions are signed, HTTP-only, SameSite=Lax cookies; users are re-checked against the DB on each request
+- Server Actions provide built-in CSRF protection (origin checking)
+- Uploads are checked by size, declared type **and** magic bytes; photos are only served to signed-in staff
+- Security headers set in `next.config.ts`
 
-```
-├── ajax/                   # AJAX endpoints
-├── assets/                 # CSS, JS, and images
-├── config/                 # Database configuration
-├── db/                     # Database schema
-├── includes/               # Header and footer templates
-├── uploads/                # User uploaded files
-├── *.php                   # Main application files
-└── README.md              # This file
-```
+Known limitations: no rate limiting on the public forms or login (add one at your CDN/WAF or with Upstash), and no password-reset flow (admins are created via seed).
 
-## Contributing
+---
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+## বাংলায় সংক্ষেপে
+
+এটি বিধবা, বয়োজ্যেষ্ঠ ও প্রতিবন্ধী ব্যক্তিদের জন্য রিলিফ কর্মসূচি পরিচালনার একটি ওয়েব অ্যাপ। আবেদন, অনুমোদন, রিলিফ কার্ড, মাসিক আবেদন, বিতরণ ও পরিসংখ্যান — সব এক জায়গায়। চালু করতে উপরের **Getting started** অংশ অনুসরণ করুন।
 
 ## License
 
-This project is licensed under the MIT License.
+MIT

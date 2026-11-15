@@ -19,7 +19,7 @@ export default async function Recipients({ searchParams }: { searchParams: Promi
   const where: Prisma.RecipientWhereInput = {
     ...(status && { status }),
     ...(category && { category }),
-    ...(q && { OR: [{ name: { contains: q, mode: "insensitive" } }, { nid: { contains: q } }, { phone: { contains: q } }] }),
+    ...(q && { OR: [{ name: { contains: q } }, { nid: { contains: q } }, { phone: { contains: q } }] }),
   };
   const [total, rows] = await Promise.all([
     db.recipient.count({ where }),

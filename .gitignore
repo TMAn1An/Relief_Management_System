@@ -8,3 +8,5 @@ next-env.d.ts
 coverage
 .DS_Store
 .vercel
+prisma/dev.db
+prisma/dev.db-journal

@@ -32,32 +32,30 @@ A web application for running a relief program for **widows, the elderly and peo
 
 ## Stack
 
-Next.js 15 (App Router, Server Actions) · TypeScript · Tailwind CSS 4 · Prisma 6 · PostgreSQL · zod · jose + bcrypt for sessions
+Next.js 15 (App Router, Server Actions) · TypeScript · Tailwind CSS 4 · Prisma 6 · SQLite locally / [Turso](https://turso.tech) (libSQL) in production · zod · jose + bcrypt for sessions
 
-## Getting started
+## Getting started (local)
 
 ```bash
-cp .env.example .env          # then edit DATABASE_URL and SESSION_SECRET
+cp .env.example .env          # defaults work: a local SQLite file
 npm install
-npx prisma migrate dev        # creates the schema
-npm run db:seed               # creates the first admin from SEED_ADMIN_* values
+npx prisma migrate dev        # creates prisma/dev.db and seeds the first admin
 npm run dev                   # http://localhost:3000
 ```
 
-Sign in at `/login` with the seeded admin account, then **change the seed password** before going live.
+Sign in at `/login` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` from your `.env`, and **change that password before going live**.
 
-## Deploying (e.g. Vercel + Neon/Supabase)
+## Deploying (Vercel + Turso)
 
-1. Create a PostgreSQL database and copy its connection string.
-2. Set `DATABASE_URL` and `SESSION_SECRET` (`openssl rand -base64 32`) as environment variables.
-3. (Vercel: automatic.) Elsewhere run `npx prisma migrate deploy`, then `npm run db:seed`.
-4. Deploy. On Vercel the `vercel-build` script runs `prisma generate`, applies migrations (`prisma migrate deploy`) and seeds the admin automatically when `DATABASE_URL` and `SEED_ADMIN_*` are set.
+1. Create a Turso database (`turso db create relief`) and a database token (`turso db tokens create relief`).
+2. In Vercel set `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `SESSION_SECRET` (`openssl rand -base64 32`), `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`.
+3. Deploy. The `vercel-build` script generates the Prisma client, applies migrations to Turso (`scripts/migrate-turso.mjs`, idempotent), seeds the admin if missing, then builds.
 
-Photos are stored in the database (≤ 500 KB each), so no writable disk or object storage is required.
+Turso is accessed over HTTPS through Prisma's libSQL adapter, so no native modules or writable disk are needed. Photos are stored in the database (≤ 500 KB each).
 
 ## Scripts
 
-`dev` · `build` · `start` · `lint` · `typecheck` · `test` · `db:migrate` · `db:deploy` · `db:seed`
+`dev` · `build` · `start` · `lint` · `typecheck` · `test` · `db:migrate` · `db:seed`
 
 ## Security notes
 

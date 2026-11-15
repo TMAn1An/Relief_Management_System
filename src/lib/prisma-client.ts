@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSQL } from "@prisma/adapter-libsql";
+import { PrismaLibSQL } from "@prisma/adapter-libsql/web";
 
 /**
- * Production uses Turso (libSQL) via TURSO_DATABASE_URL + TURSO_AUTH_TOKEN.
+ * Production uses Turso (libSQL, over HTTP so no native module is bundled) via TURSO_DATABASE_URL + TURSO_AUTH_TOKEN.
  * Local development and tests use a plain SQLite file via DATABASE_URL.
  */
 export function createPrismaClient(): PrismaClient {

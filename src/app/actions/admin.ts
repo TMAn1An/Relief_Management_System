@@ -1,9 +1,10 @@
 "use server";
 
-import { Prisma, type Status } from "@prisma/client";
+import type { Status } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { isUniqueViolation } from "@/lib/db-errors";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { readPhoto } from "@/lib/photo";
@@ -17,8 +18,6 @@ import {
   keepInput,
   type ActionState,
 } from "@/lib/validation";
-
-const isUniqueViolation = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
 
 export async function setRecipientStatus(recipientId: string, status: Status) {
   const user = await requireUser();

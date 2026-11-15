@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/db-errors";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { clearRateLimit, rateLimit } from "@/lib/rate-limit";
 import { readPhoto } from "@/lib/photo";
 import { periodOf } from "@/lib/period";
 import { STATUSES } from "@/lib/labels";
@@ -138,6 +139,8 @@ export async function changePassword(prev: ActionState, formData: FormData): Pro
 
 async function changePasswordImpl(_: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
+  const blocked = await rateLimit("change-password", user.id, 5, 15 * 60);
+  if (blocked) return { message: blocked };
   const parsed = changePasswordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: flattenErrors(parsed.error) };
 
@@ -147,6 +150,7 @@ async function changePasswordImpl(_: ActionState, formData: FormData): Promise<A
   }
 
   await db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 12) } });
+  await clearRateLimit("change-password", user.id);
   await audit(user.id, "PASSWORD_CHANGED", "User", user.id);
   return { ok: true, message: "Your password has been updated." };
 }

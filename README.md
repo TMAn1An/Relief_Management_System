@@ -66,7 +66,12 @@ Turso is accessed over HTTPS through Prisma's libSQL adapter, so no native modul
 - Uploads are checked by size, declared type **and** magic bytes; photos are only served to signed-in staff
 - Security headers set in `next.config.ts`
 
-Staff can change their own password under **Account**. Known limitations: no rate limiting on the public forms or login (add one at your CDN/WAF or with Upstash), and no *forgotten*-password reset flow (admins are created via seed).
+Staff can change their own password under **Account**. 
+## Rate limiting
+
+Counters live in the database (serverless instances share no memory), as atomic fixed-window upserts: login 10/15 min per IP and 8/15 min per email; applications 5/hour per IP; status checks and monthly requests 10/15 min per IP and per NID; password change 5/15 min per user. Limits fail open if the database errors. Tune them where `rateLimit(...)` is called in `src/app/actions/`.
+
+Known limitation: no email-based *forgotten*-password flow (an admin resets staff passwords).
 
 ---
 

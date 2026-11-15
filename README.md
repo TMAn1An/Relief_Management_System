@@ -50,8 +50,8 @@ Sign in at `/login` with the seeded admin account, then **change the seed passwo
 
 1. Create a PostgreSQL database and copy its connection string.
 2. Set `DATABASE_URL` and `SESSION_SECRET` (`openssl rand -base64 32`) as environment variables.
-3. Run migrations once: `npx prisma migrate deploy`, then `npm run db:seed`.
-4. Deploy. The build script runs `prisma generate` automatically.
+3. (Vercel: automatic.) Elsewhere run `npx prisma migrate deploy`, then `npm run db:seed`.
+4. Deploy. On Vercel the `vercel-build` script runs `prisma generate`, applies migrations (`prisma migrate deploy`) and seeds the admin automatically when `DATABASE_URL` and `SEED_ADMIN_*` are set.
 
 Photos are stored in the database (≤ 500 KB each), so no writable disk or object storage is required.
 

@@ -18,10 +18,11 @@ const steps = [
 ];
 
 export default async function Home() {
-  const [recipients, distributed] = await Promise.all([
+  // The landing page must stay up even if the database is briefly unreachable.
+  const stats = await Promise.all([
     db.recipient.count({ where: { status: "APPROVED" } }),
     db.distribution.count({ where: { period: periodOf() } }),
-  ]);
+  ]).catch(() => null);
 
   return (
     <>
@@ -39,16 +40,18 @@ export default async function Home() {
               Check my status
             </ButtonLink>
           </div>
-          <dl className="mt-12 grid max-w-md grid-cols-2 gap-6">
-            <div>
-              <dt className="text-sm text-brand-100">Approved recipients</dt>
-              <dd className="text-3xl font-bold">{recipients.toLocaleString("en-GB")}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-brand-100">Items distributed this month</dt>
-              <dd className="text-3xl font-bold">{distributed.toLocaleString("en-GB")}</dd>
-            </div>
-          </dl>
+          {stats && (
+            <dl className="mt-12 grid max-w-md grid-cols-2 gap-6">
+              <div>
+                <dt className="text-sm text-brand-100">Approved recipients</dt>
+                <dd className="text-3xl font-bold">{stats[0].toLocaleString("en-GB")}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-brand-100">Items distributed this month</dt>
+                <dd className="text-3xl font-bold">{stats[1].toLocaleString("en-GB")}</dd>
+              </div>
+            </dl>
+          )}
         </div>
       </section>
 

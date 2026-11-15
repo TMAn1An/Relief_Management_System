@@ -26,19 +26,21 @@ export function retryMessage(seconds: number): string {
  */
 export async function rateLimit(scope: string, identifier: string, limit: number, windowSec: number): Promise<string | null> {
   const key = `${scope}:${identifier}`;
-  const now = Date.now();
-  const resetAt = now + windowSec * 1000;
+  // BigInt on purpose: the libSQL adapter binds plain JS numbers as floats (e.g. 1794772385793.0),
+  // which breaks integer comparison and read-back.
+  const now = BigInt(Date.now());
+  const resetAt = now + BigInt(windowSec) * 1000n;
   try {
     const rows = await db.$queryRaw<{ count: number | bigint; resetAt: number | bigint }[]>`
       INSERT INTO "RateLimit" ("key", "count", "resetAt") VALUES (${key}, 1, ${resetAt})
       ON CONFLICT ("key") DO UPDATE SET
         "count" = CASE WHEN "RateLimit"."resetAt" <= ${now} THEN 1 ELSE "RateLimit"."count" + 1 END,
         "resetAt" = CASE WHEN "RateLimit"."resetAt" <= ${now} THEN ${resetAt} ELSE "RateLimit"."resetAt" END
-      RETURNING "count", "resetAt"`;
+      RETURNING "count", CAST("resetAt" AS INTEGER) AS "resetAt"`;
     // Housekeeping: occasionally drop expired windows so the table stays small.
     if (Math.random() < 0.02) await db.rateLimit.deleteMany({ where: { resetAt: { lte: now } } });
     const count = Number(rows[0]?.count ?? 0);
-    if (count > limit) return retryMessage(Math.max(1, Math.ceil((Number(rows[0].resetAt) - now) / 1000)));
+    if (count > limit) return retryMessage(Math.max(1, Math.ceil((Number(rows[0].resetAt) - Number(now)) / 1000)));
     return null;
   } catch (e) {
     console.error("rateLimit failed open", e);

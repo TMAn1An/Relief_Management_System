@@ -11,7 +11,6 @@ export const en = {
   "footer.title": "Relief Management System",
   "footer.text": "Supporting widows, the elderly and people with disabilities with dignity and transparency.",
   "lang.switch": "বাংলা",
-  "lang.switch_label": "Switch to Bangla",
 
   // enums
   "category.WIDOW": "Widow",

@@ -12,7 +12,6 @@ export const bn: Record<TKey, string> = {
   "footer.title": "ত্রাণ ব্যবস্থাপনা সিস্টেম",
   "footer.text": "বিধবা, বয়স্ক ও প্রতিবন্ধী মানুষের পাশে মর্যাদা ও স্বচ্ছতার সঙ্গে।",
   "lang.switch": "English",
-  "lang.switch_label": "ইংরেজিতে দেখুন",
 
   "category.WIDOW": "বিধবা",
   "category.ELDERLY": "বয়স্ক",

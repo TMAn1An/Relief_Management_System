@@ -14,7 +14,6 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       <button
         type="submit"
         lang={other}
-        aria-label={t("lang.switch_label")}
         className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
       >
         <Languages className="h-4 w-4" aria-hidden /> {t("lang.switch")}

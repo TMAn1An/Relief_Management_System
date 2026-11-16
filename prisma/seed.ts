@@ -12,7 +12,7 @@ async function main() {
   const passwordHash = await bcrypt.hash(password, 12);
   await db.user.upsert({
     where: { email },
-    create: { email, name: "Administrator", passwordHash, role: "ADMIN" },
+    create: { email, name: "Administrator", passwordHash, role: "ADMIN", mustChangePassword: true },
     update: {},
   });
   console.log(`Admin ready: ${email}`);

@@ -8,7 +8,7 @@ import { db } from "./db";
 const COOKIE = "rms_session";
 const MAX_AGE = 60 * 60 * 8; // 8 hours
 
-export type SessionUser = { id: string; name: string; email: string; role: Role };
+export type SessionUser = { id: string; name: string; email: string; role: Role; mustChangePassword: boolean };
 
 function secret() {
   const s = process.env.SESSION_SECRET;
@@ -42,10 +42,13 @@ export async function getUser(): Promise<SessionUser | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
     if (typeof payload.sub !== "string") return null;
-    return await db.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, name: true, email: true, role: true },
+      select: { id: true, name: true, email: true, role: true, active: true, mustChangePassword: true },
     });
+    if (!user || !user.active) return null;
+    const { active: _active, ...session } = user;
+    return session;
   } catch {
     return null;
   }

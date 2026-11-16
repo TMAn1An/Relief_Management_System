@@ -45,3 +45,18 @@ describe("changePasswordSchema", () => {
     expect(changePasswordSchema.safeParse({ ...ok, newPassword: long, confirmPassword: long }).success).toBe(false);
   });
 });
+
+import { createUserSchema, resetPasswordSchema } from "./validation";
+
+describe("staff schemas", () => {
+  const u = { name: "Karim Uddin", email: " Karim@Example.COM ", role: "STAFF", password: "temporary-pass" };
+  it("normalises the email and accepts a valid account", () => {
+    const r = createUserSchema.safeParse(u);
+    expect(r.success && r.data.email).toBe("karim@example.com");
+  });
+  it("rejects unknown roles and weak passwords", () => {
+    expect(createUserSchema.safeParse({ ...u, role: "OWNER" }).success).toBe(false);
+    expect(createUserSchema.safeParse({ ...u, password: "short" }).success).toBe(false);
+    expect(resetPasswordSchema.safeParse({ password: "x".repeat(73) }).success).toBe(false);
+  });
+});

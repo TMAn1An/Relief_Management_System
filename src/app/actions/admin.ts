@@ -14,6 +14,8 @@ import { periodOf } from "@/lib/period";
 import { STATUSES } from "@/lib/labels";
 import {
   changePasswordSchema,
+  createUserSchema,
+  resetPasswordSchema,
   distributionSchema,
   flattenErrors,
   normalizeItem,
@@ -149,8 +151,62 @@ async function changePasswordImpl(_: ActionState, formData: FormData): Promise<A
     return { errors: { currentPassword: ["Your current password is incorrect"] } };
   }
 
-  await db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 12) } });
+  await db.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 12), mustChangePassword: false },
+  });
   await clearRateLimit("change-password", user.id);
   await audit(user.id, "PASSWORD_CHANGED", "User", user.id);
   return { ok: true, message: "Your password has been updated." };
+}
+
+// ---------- Staff management (admin only) ----------
+
+export async function createUser(prev: ActionState, formData: FormData): Promise<ActionState> {
+  return keepInput(await createUserImpl(prev, formData), formData);
+}
+
+async function createUserImpl(_: ActionState, formData: FormData): Promise<ActionState> {
+  const admin = await requireAdmin();
+  const parsed = createUserSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { errors: flattenErrors(parsed.error) };
+  try {
+    const u = await db.user.create({
+      data: {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        role: parsed.data.role,
+        passwordHash: await bcrypt.hash(parsed.data.password, 12),
+        mustChangePassword: true,
+      },
+    });
+    await audit(admin.id, "USER_CREATED", "User", u.id, `${u.email} (${u.role})`);
+  } catch (e) {
+    if (isUniqueViolation(e)) return { errors: { email: ["An account with this email already exists"] } };
+    console.error("createUser failed", e);
+    return { message: "Could not create the account. Please try again." };
+  }
+  revalidatePath("/admin/users");
+  return { ok: true, message: `Account created. Share the temporary password with ${parsed.data.name}; they'll be asked to change it.` };
+}
+
+export async function setUserActive(id: string, active: boolean) {
+  const admin = await requireAdmin();
+  if (id === admin.id) return; // an admin can't lock themselves out
+  const u = await db.user.update({ where: { id }, data: { active } });
+  await audit(admin.id, active ? "USER_ACTIVATED" : "USER_DEACTIVATED", "User", id, u.email);
+  revalidatePath("/admin/users");
+}
+
+export async function resetUserPassword(id: string, _: ActionState, formData: FormData): Promise<ActionState> {
+  const admin = await requireAdmin();
+  if (id === admin.id) return { message: "Use the Account page to change your own password." };
+  const parsed = resetPasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { errors: flattenErrors(parsed.error) };
+  const u = await db.user.update({
+    where: { id },
+    data: { passwordHash: await bcrypt.hash(parsed.data.password, 12), mustChangePassword: true },
+  });
+  await audit(admin.id, "USER_PASSWORD_RESET", "User", id, u.email);
+  return { ok: true, message: `Password reset. ${u.name} will be asked to choose a new one at next sign-in.` };
 }

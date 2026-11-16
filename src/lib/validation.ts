@@ -36,14 +36,25 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Enter your password"),
 });
 
+/** bcrypt only uses the first 72 bytes, so longer passwords would be silently truncated. */
+export const passwordSchema = z
+  .string()
+  .min(8, "Use at least 8 characters")
+  .refine((v) => new TextEncoder().encode(v).length <= 72, "Use at most 72 characters");
+
+export const createUserSchema = z.object({
+  name: z.string().trim().min(2, "Enter the full name").max(100),
+  email: z.string().trim().toLowerCase().email("Enter a valid email"),
+  role: z.enum(["ADMIN", "STAFF"], { message: "Select a role" }),
+  password: passwordSchema,
+});
+
+export const resetPasswordSchema = z.object({ password: passwordSchema });
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Enter your current password"),
-    // bcrypt only uses the first 72 bytes, so longer passwords would be silently truncated.
-    newPassword: z
-      .string()
-      .min(8, "Use at least 8 characters")
-      .refine((v) => new TextEncoder().encode(v).length <= 72, "Use at most 72 characters"),
+    newPassword: passwordSchema,
     confirmPassword: z.string(),
   })
   .refine((v) => v.newPassword === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords don't match" })

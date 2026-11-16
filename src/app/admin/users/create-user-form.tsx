@@ -4,8 +4,10 @@ import { useActionState, useEffect, useRef } from "react";
 import { createUser } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/submit-button";
 import { Alert, Field, Input, Select } from "@/components/ui";
+import { useT } from "@/lib/i18n/client";
 
 export function CreateUserForm() {
+  const t = useT();
   const [state, action] = useActionState(createUser, {});
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => { if (state.ok) ref.current?.reset(); }, [state]);
@@ -15,18 +17,18 @@ export function CreateUserForm() {
     <form ref={ref} action={action} className="space-y-4" noValidate>
       {state.ok && <Alert tone="success">{state.message}</Alert>}
       {state.message && !state.ok && <Alert tone="error">{state.message}</Alert>}
-      <Field label="Full name" name="name" error={e.name}><Input name="name" defaultValue={v.name} required error={e.name} /></Field>
-      <Field label="Email" name="email" error={e.email}><Input name="email" type="email" defaultValue={v.email} required error={e.email} /></Field>
-      <Field label="Role" name="role" error={e.role} hint="Admins can manage staff and delete records; staff can review and distribute.">
+      <Field label={t("users.name")} name="name" error={e.name}><Input name="name" defaultValue={v.name} required error={e.name} /></Field>
+      <Field label={t("users.email")} name="email" error={e.email}><Input name="email" type="email" defaultValue={v.email} required error={e.email} /></Field>
+      <Field label={t("users.role")} name="role" error={e.role} hint={t("users.role_hint")}>
         <Select key={v.role ?? "STAFF"} name="role" defaultValue={v.role ?? "STAFF"} error={e.role}>
-          <option value="STAFF">Staff</option>
-          <option value="ADMIN">Admin</option>
+          <option value="STAFF">{t("role.STAFF")}</option>
+          <option value="ADMIN">{t("role.ADMIN")}</option>
         </Select>
       </Field>
-      <Field label="Temporary password" name="password" error={e.password} hint="At least 8 characters. They'll be asked to change it on first sign-in.">
+      <Field label={t("users.temp_pw")} name="password" error={e.password} hint={t("users.temp_pw_hint")}>
         <Input name="password" type="text" autoComplete="off" required error={e.password} />
       </Field>
-      <SubmitButton pendingText="Creating…" className="w-full">Create account</SubmitButton>
+      <SubmitButton pendingText={t("users.creating")} className="w-full">{t("users.create")}</SubmitButton>
     </form>
   );
 }

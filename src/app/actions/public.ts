@@ -3,7 +3,9 @@
 import { db } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/db-errors";
 import { audit } from "@/lib/audit";
-import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { blockedMessage, clientIp, rateLimit } from "@/lib/rate-limit";
+import { getT } from "@/lib/i18n/server";
+import type { TFn } from "@/lib/i18n";
 import { readPhoto } from "@/lib/photo";
 import { nextPeriodStart, periodOf } from "@/lib/period";
 import { flattenErrors, recipientSchema, verifySchema, keepInput, type ActionState } from "@/lib/validation";
@@ -14,12 +16,13 @@ export async function registerRecipient(prev: ActionState<{ nid: string }>, form
 }
 
 async function registerRecipientImpl(_: ActionState<{ nid: string }>, formData: FormData): Promise<ActionState<{ nid: string }>> {
-  const blocked = await rateLimit("register-ip", await clientIp(), 5, 60 * 60);
-  if (blocked) return { message: blocked };
+  const t = await getT();
+  const wait = await rateLimit("register-ip", await clientIp(), 5, 60 * 60);
+  if (wait) return { message: blockedMessage(t, wait) };
   const parsed = recipientSchema.safeParse(Object.fromEntries(formData));
   const photo = await readPhoto(formData.get("photo"), true);
-  const errors = parsed.success ? {} : flattenErrors(parsed.error);
-  if (photo && "error" in photo) errors.photo = [photo.error];
+  const errors = parsed.success ? {} : flattenErrors(parsed.error, t);
+  if (photo && "error" in photo) errors.photo = [t(photo.error)];
   if (!parsed.success || (photo && "error" in photo) || !photo) return { errors };
 
   try {
@@ -27,11 +30,11 @@ async function registerRecipientImpl(_: ActionState<{ nid: string }>, formData: 
       data: { ...parsed.data, photo: { create: { data: new Uint8Array(photo.data), mime: photo.mime } } },
     });
     await audit(null, "REGISTERED", "Recipient", recipient.id, `Public application for NID ${recipient.nid}`);
-    return { ok: true, data: { nid: recipient.nid }, message: "Application received." };
+    return { ok: true, data: { nid: recipient.nid }, message: t("m.registered") };
   } catch (e) {
-    if (isUniqueViolation(e)) return { errors: { nid: ["An application with this NID already exists"] } };
+    if (isUniqueViolation(e)) return { errors: { nid: [t("m.nid_exists")] } };
     console.error("registerRecipient failed", e);
-    return { message: "Something went wrong while saving your application. Please try again." };
+    return { message: t("m.apply_error") };
   }
 }
 
@@ -51,25 +54,25 @@ async function findVerified(nid: string, phone: string) {
 }
 
 /** NID + phone lookups are the brute-force target: limit per IP and per NID. */
-async function guardVerification(nid: string | null) {
-  const byIp = await rateLimit("verify-ip", await clientIp(), 10, 15 * 60);
-  if (byIp) return byIp;
-  return nid ? rateLimit("verify-nid", nid, 10, 15 * 60) : null;
+async function guardVerification(t: TFn, nid: string | null): Promise<string | null> {
+  const wait =
+    (await rateLimit("verify-ip", await clientIp(), 10, 15 * 60)) ??
+    (nid ? await rateLimit("verify-nid", nid, 10, 15 * 60) : null);
+  return wait ? blockedMessage(t, wait) : null;
 }
-
-const NOT_FOUND = "We couldn't find a recipient matching that NID and phone number.";
 
 export async function lookupStatus(prev: ActionState<StatusLookup>, formData: FormData): Promise<ActionState<StatusLookup>> {
   return keepInput(await lookupStatusImpl(prev, formData), formData);
 }
 
 async function lookupStatusImpl(_: ActionState<StatusLookup>, formData: FormData): Promise<ActionState<StatusLookup>> {
+  const t = await getT();
   const parsed = verifySchema.safeParse(Object.fromEntries(formData));
-  const blocked = await guardVerification(parsed.success ? parsed.data.nid : null);
+  const blocked = await guardVerification(t, parsed.success ? parsed.data.nid : null);
   if (blocked) return { message: blocked };
-  if (!parsed.success) return { errors: flattenErrors(parsed.error) };
+  if (!parsed.success) return { errors: flattenErrors(parsed.error, t) };
   const recipient = await findVerified(parsed.data.nid, parsed.data.phone);
-  if (!recipient) return { message: NOT_FOUND };
+  if (!recipient) return { message: t("m.not_found") };
 
   const period = periodOf();
   const request = await db.reliefRequest.findUnique({
@@ -96,14 +99,15 @@ async function submitMonthlyRequestImpl(
   _: ActionState<{ nextRequestAt: string }>,
   formData: FormData,
 ): Promise<ActionState<{ nextRequestAt: string }>> {
+  const t = await getT();
   const parsed = verifySchema.safeParse(Object.fromEntries(formData));
-  const blocked = await guardVerification(parsed.success ? parsed.data.nid : null);
+  const blocked = await guardVerification(t, parsed.success ? parsed.data.nid : null);
   if (blocked) return { message: blocked };
-  if (!parsed.success) return { errors: flattenErrors(parsed.error) };
+  if (!parsed.success) return { errors: flattenErrors(parsed.error, t) };
   const recipient = await findVerified(parsed.data.nid, parsed.data.phone);
-  if (!recipient) return { message: NOT_FOUND };
+  if (!recipient) return { message: t("m.not_found") };
   if (recipient.status !== "APPROVED") {
-    return { message: "Your application must be approved before you can submit a monthly request." };
+    return { message: t("m.must_be_approved") };
   }
 
   const period = periodOf();
@@ -111,12 +115,12 @@ async function submitMonthlyRequestImpl(
   try {
     await db.reliefRequest.create({ data: { recipientId: recipient.id, period } });
     await audit(null, "REQUEST_SUBMITTED", "Recipient", recipient.id, `Monthly request for ${period}`);
-    return { ok: true, data: { nextRequestAt }, message: "Your request has been submitted." };
+    return { ok: true, data: { nextRequestAt }, message: t("m.request_done") };
   } catch (e) {
     if (isUniqueViolation(e)) {
-      return { message: "You have already submitted a request this month.", data: { nextRequestAt } };
+      return { message: t("m.already_requested"), data: { nextRequestAt } };
     }
     console.error("submitMonthlyRequest failed", e);
-    return { message: "Something went wrong. Please try again." };
+    return { message: t("m.generic") };
   }
 }

@@ -8,7 +8,8 @@ import { db } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/db-errors";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
-import { clearRateLimit, rateLimit } from "@/lib/rate-limit";
+import { blockedMessage, clearRateLimit, rateLimit } from "@/lib/rate-limit";
+import { getT } from "@/lib/i18n/server";
 import { readPhoto } from "@/lib/photo";
 import { periodOf } from "@/lib/period";
 import { STATUSES } from "@/lib/labels";
@@ -48,11 +49,12 @@ async function updateRecipientImpl(
   _: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  const t = await getT();
   const user = await requireUser();
   const parsed = recipientSchema.safeParse(Object.fromEntries(formData));
   const photo = await readPhoto(formData.get("photo"), false);
-  const errors = parsed.success ? {} : flattenErrors(parsed.error);
-  if (photo && "error" in photo) errors.photo = [photo.error];
+  const errors = parsed.success ? {} : flattenErrors(parsed.error, t);
+  if (photo && "error" in photo) errors.photo = [t(photo.error)];
   if (!parsed.success || (photo && "error" in photo)) return { errors };
 
   try {
@@ -73,9 +75,9 @@ async function updateRecipientImpl(
       },
     });
   } catch (e) {
-    if (isUniqueViolation(e)) return { errors: { nid: ["Another recipient already uses this NID"] } };
+    if (isUniqueViolation(e)) return { errors: { nid: [t("m.nid_used")] } };
     console.error("updateRecipient failed", e);
-    return { message: "Could not save changes. Please try again." };
+    return { message: t("m.edit_error") };
   }
   await audit(user.id, "UPDATED", "Recipient", id, `NID ${parsed.data.nid}`);
   revalidatePath("/admin", "layout");
@@ -95,14 +97,15 @@ export async function addDistribution(prev: ActionState, formData: FormData): Pr
 }
 
 async function addDistributionImpl(_: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getT();
   const user = await requireUser();
   const parsed = distributionSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { errors: flattenErrors(parsed.error) };
+  if (!parsed.success) return { errors: flattenErrors(parsed.error, t) };
 
   const recipient = await db.recipient.findUnique({ where: { nid: parsed.data.nid } });
-  if (!recipient) return { errors: { nid: ["No recipient found with this NID"] } };
+  if (!recipient) return { errors: { nid: [t("m.no_recipient")] } };
   if (recipient.status !== "APPROVED") {
-    return { errors: { nid: [`${recipient.name} is not approved yet and cannot receive relief items`] } };
+    return { errors: { nid: [t("m.not_approved", { name: recipient.name })] } };
   }
 
   const itemName = parsed.data.itemName.replace(/\s+/g, " ");
@@ -119,13 +122,13 @@ async function addDistributionImpl(_: ActionState, formData: FormData): Promise<
     await audit(user.id, "DISTRIBUTED", "Distribution", d.id, `${itemName} × ${parsed.data.quantity} to NID ${recipient.nid}`);
   } catch (e) {
     if (isUniqueViolation(e)) {
-      return { errors: { itemName: [`${recipient.name} has already received “${itemName}” this month`] } };
+      return { errors: { itemName: [t("m.item_dup", { name: recipient.name, item: itemName })] } };
     }
     console.error("addDistribution failed", e);
-    return { message: "Could not record the distribution. Please try again." };
+    return { message: t("m.dist_error") };
   }
   revalidatePath("/admin", "layout");
-  return { ok: true, message: `Recorded ${itemName} for ${recipient.name}.` };
+  return { ok: true, message: t("m.recorded", { item: itemName, name: recipient.name }) };
 }
 
 export async function deleteDistribution(id: string) {
@@ -140,15 +143,16 @@ export async function changePassword(prev: ActionState, formData: FormData): Pro
 }
 
 async function changePasswordImpl(_: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getT();
   const user = await requireUser();
-  const blocked = await rateLimit("change-password", user.id, 5, 15 * 60);
-  if (blocked) return { message: blocked };
+  const wait = await rateLimit("change-password", user.id, 5, 15 * 60);
+  if (wait) return { message: blockedMessage(t, wait) };
   const parsed = changePasswordSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { errors: flattenErrors(parsed.error) };
+  if (!parsed.success) return { errors: flattenErrors(parsed.error, t) };
 
   const row = await db.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
   if (!row || !(await bcrypt.compare(parsed.data.currentPassword, row.passwordHash))) {
-    return { errors: { currentPassword: ["Your current password is incorrect"] } };
+    return { errors: { currentPassword: [t("m.pw_incorrect")] } };
   }
 
   await db.user.update({
@@ -157,7 +161,7 @@ async function changePasswordImpl(_: ActionState, formData: FormData): Promise<A
   });
   await clearRateLimit("change-password", user.id);
   await audit(user.id, "PASSWORD_CHANGED", "User", user.id);
-  return { ok: true, message: "Your password has been updated." };
+  return { ok: true, message: t("m.pw_updated") };
 }
 
 // ---------- Staff management (admin only) ----------
@@ -167,9 +171,10 @@ export async function createUser(prev: ActionState, formData: FormData): Promise
 }
 
 async function createUserImpl(_: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getT();
   const admin = await requireAdmin();
   const parsed = createUserSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { errors: flattenErrors(parsed.error) };
+  if (!parsed.success) return { errors: flattenErrors(parsed.error, t) };
   try {
     const u = await db.user.create({
       data: {
@@ -182,12 +187,12 @@ async function createUserImpl(_: ActionState, formData: FormData): Promise<Actio
     });
     await audit(admin.id, "USER_CREATED", "User", u.id, `${u.email} (${u.role})`);
   } catch (e) {
-    if (isUniqueViolation(e)) return { errors: { email: ["An account with this email already exists"] } };
+    if (isUniqueViolation(e)) return { errors: { email: [t("m.email_exists")] } };
     console.error("createUser failed", e);
-    return { message: "Could not create the account. Please try again." };
+    return { message: t("m.user_error") };
   }
   revalidatePath("/admin/users");
-  return { ok: true, message: `Account created. Share the temporary password with ${parsed.data.name}; they'll be asked to change it.` };
+  return { ok: true, message: t("m.user_created", { name: parsed.data.name }) };
 }
 
 export async function setUserActive(id: string, active: boolean) {
@@ -199,14 +204,15 @@ export async function setUserActive(id: string, active: boolean) {
 }
 
 export async function resetUserPassword(id: string, _: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getT();
   const admin = await requireAdmin();
-  if (id === admin.id) return { message: "Use the Account page to change your own password." };
+  if (id === admin.id) return { message: t("m.reset_self") };
   const parsed = resetPasswordSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { errors: flattenErrors(parsed.error) };
+  if (!parsed.success) return { errors: flattenErrors(parsed.error, t) };
   const u = await db.user.update({
     where: { id },
     data: { passwordHash: await bcrypt.hash(parsed.data.password, 12), mustChangePassword: true },
   });
   await audit(admin.id, "USER_PASSWORD_RESET", "User", id, u.email);
-  return { ok: true, message: `Password reset. ${u.name} will be asked to choose a new one at next sign-in.` };
+  return { ok: true, message: t("m.pw_reset", { name: u.name }) };
 }

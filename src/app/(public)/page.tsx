@@ -2,22 +2,24 @@ import { HandHeart, PersonStanding, Users, ShieldCheck, ClipboardCheck, Calendar
 import { ButtonLink, Card } from "@/components/ui";
 import { db } from "@/lib/db";
 import { periodOf } from "@/lib/period";
+import { getT } from "@/lib/i18n/server";
+import { localeOf } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
-const programs = [
-  { icon: Users, title: "Elderly support", text: "Allowances and essential supplies for citizens aged 60 and above, so they can live with comfort and dignity." },
-  { icon: HandHeart, title: "Widow assistance", text: "Financial aid and essential resources that help widows build a secure, self-reliant life." },
-  { icon: PersonStanding, title: "Disability care", text: "Dedicated assistance that reaches differently-abled community members and promotes equal opportunity." },
-];
-
-const steps = [
-  { icon: ClipboardCheck, title: "1. Apply once", text: "Fill in the short form with your NID, phone number and a photo." },
-  { icon: ShieldCheck, title: "2. Get approved", text: "Our team reviews your application. Approved recipients receive a relief card." },
-  { icon: CalendarClock, title: "3. Request monthly", text: "Submit a request each month and collect your relief package." },
-];
-
 export default async function Home() {
+  const t = await getT();
+  const nf = new Intl.NumberFormat(localeOf(t.lang));
+  const programs = [
+    { icon: Users, title: t("home.p1_title"), text: t("home.p1_text") },
+    { icon: HandHeart, title: t("home.p2_title"), text: t("home.p2_text") },
+    { icon: PersonStanding, title: t("home.p3_title"), text: t("home.p3_text") },
+  ];
+  const steps = [
+    { icon: ClipboardCheck, title: t("home.s1_title"), text: t("home.s1_text") },
+    { icon: ShieldCheck, title: t("home.s2_title"), text: t("home.s2_text") },
+    { icon: CalendarClock, title: t("home.s3_title"), text: t("home.s3_text") },
+  ];
   // The landing page must stay up even if the database is briefly unreachable.
   const stats = await Promise.all([
     db.recipient.count({ where: { status: "APPROVED" } }),
@@ -29,26 +31,26 @@ export default async function Home() {
       <section className="bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 text-white">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
           <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-            Relief that reaches the people who need it most.
+            {t("home.hero_title")}
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-brand-100">
-            Apply for support, track your application and submit your monthly relief request — all in one place.
+            {t("home.hero_text")}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/apply" className="!bg-white !text-brand-800 hover:!bg-brand-50">Apply for relief</ButtonLink>
+            <ButtonLink href="/apply" className="!bg-white !text-brand-800 hover:!bg-brand-50">{t("home.cta_apply")}</ButtonLink>
             <ButtonLink href="/status" variant="ghost" className="!text-white ring-1 ring-white/40 hover:!bg-white/10">
-              Check my status
+              {t("home.cta_status")}
             </ButtonLink>
           </div>
           {stats && (
             <dl className="mt-12 grid max-w-md grid-cols-2 gap-6">
               <div>
-                <dt className="text-sm text-brand-100">Approved recipients</dt>
-                <dd className="text-3xl font-bold">{stats[0].toLocaleString("en-GB")}</dd>
+                <dt className="text-sm text-brand-100">{t("home.stat_recipients")}</dt>
+                <dd className="text-3xl font-bold">{nf.format(stats[0])}</dd>
               </div>
               <div>
-                <dt className="text-sm text-brand-100">Items distributed this month</dt>
-                <dd className="text-3xl font-bold">{stats[1].toLocaleString("en-GB")}</dd>
+                <dt className="text-sm text-brand-100">{t("home.stat_distributed")}</dt>
+                <dd className="text-3xl font-bold">{nf.format(stats[1])}</dd>
               </div>
             </dl>
           )}
@@ -56,7 +58,7 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-14">
-        <h2 className="text-2xl font-bold">Who we support</h2>
+        <h2 className="text-2xl font-bold">{t("home.who")}</h2>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {programs.map(({ icon: Icon, title, text }) => (
             <Card key={title}>
@@ -69,7 +71,7 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4">
-        <h2 className="text-2xl font-bold">How it works</h2>
+        <h2 className="text-2xl font-bold">{t("home.how")}</h2>
         <ol className="mt-6 grid gap-4 md:grid-cols-3">
           {steps.map(({ icon: Icon, title, text }) => (
             <li key={title}>

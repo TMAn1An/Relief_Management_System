@@ -8,7 +8,7 @@ import { getT } from "@/lib/i18n/server";
 import { LoginForm } from "./login-form";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: (await getT())("login.title") };
+  return { title: (await getT())("login.title"), robots: { index: false, follow: false } };
 }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {

@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate",
-    "vercel-build": "node scripts/vercel-build.mjs"
+    "vercel-build": "node scripts/vercel-build.mjs",
+    "test:e2e": "playwright test"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -32,6 +33,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.5",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
@@ -44,5 +46,9 @@
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.1.0"
-  }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
 }

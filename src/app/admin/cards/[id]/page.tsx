@@ -30,15 +30,17 @@ export default async function CardPage({ params }: { params: Promise<{ id: strin
         </div>
         <div className="flex gap-5 p-6">
           <Avatar recipientId={r.id} name={r.name} size={112} />
-          <dl className="grid flex-1 gap-2 text-sm">
-            <div><dt className="text-xs uppercase tracking-wide text-muted">{t("card.name")}</dt><dd className="text-lg font-semibold">{r.name}</dd></div>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="flex-1 space-y-2 text-sm">
+            <dl>
+              <div><dt className="text-xs uppercase tracking-wide text-muted">{t("card.name")}</dt><dd className="text-lg font-semibold">{r.name}</dd></div>
+            </dl>
+            <dl className="grid grid-cols-2 gap-2">
               <div><dt className="text-xs uppercase tracking-wide text-muted">{t("card.nid")}</dt><dd className="font-medium tabular-nums">{r.nid}</dd></div>
               <div><dt className="text-xs uppercase tracking-wide text-muted">{t("card.category")}</dt><dd className="font-medium">{t(`category.${r.category}`)}</dd></div>
               <div><dt className="text-xs uppercase tracking-wide text-muted">{t("card.age")}</dt><dd className="font-medium">{new Intl.NumberFormat(locale).format(r.age)}</dd></div>
               <div><dt className="text-xs uppercase tracking-wide text-muted">{t("card.issued")}</dt><dd className="font-medium">{formatDate(r.card.issuedAt, false, locale)}</dd></div>
-            </div>
-          </dl>
+            </dl>
+          </div>
         </div>
         <p className="border-t border-dashed border-line px-6 py-3 text-center text-[11px] text-muted">{t("card.footer")}</p>
       </div>

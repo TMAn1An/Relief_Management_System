@@ -31,7 +31,10 @@ async function loginImpl(_: ActionState, formData: FormData): Promise<ActionStat
   const valid = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
   if (!user || !user.active || !valid) return { message: t("m.login_bad") };
 
+  // A successful sign-in clears both counters so colleagues behind one office IP never lock each other out;
+  // every account stays protected by its own per-email limit.
   await clearRateLimit("login-email", parsed.data.email);
+  await clearRateLimit("login-ip", ip);
   await createSession(user.id);
   await audit(user.id, "LOGIN", "User", user.id);
   const next = formData.get("next");

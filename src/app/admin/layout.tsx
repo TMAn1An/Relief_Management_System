@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HeartHandshake, LayoutDashboard, Users, ClipboardCheck, Package, BarChart3, LogOut, UserCog } from "lucide-react";
+import { HeartHandshake, LayoutDashboard, Users, ClipboardCheck, Package, BarChart3, LogOut, UserCog, ShieldCheck, KeyRound } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { db } from "@/lib/db";
@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/approvals", label: "Approvals", icon: ClipboardCheck, badge: pending },
     { href: "/admin/distributions", label: "Distributions", icon: Package },
     { href: "/admin/statistics", label: "Statistics", icon: BarChart3 },
+    ...(user.role === "ADMIN" ? [{ href: "/admin/users", label: "Staff", icon: ShieldCheck }] : []),
     { href: "/admin/account", label: "Account", icon: UserCog },
   ];
 
@@ -48,7 +49,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </aside>
-      <main id="main" className="min-w-0 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
+      <main id="main" className="min-w-0 px-4 py-6 sm:px-8 sm:py-8">
+        {user.mustChangePassword && (
+          <Link href="/admin/account" className="mb-6 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 hover:bg-amber-100">
+            <KeyRound className="h-4 w-4" aria-hidden /> You’re using a temporary password. Choose your own now →
+          </Link>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

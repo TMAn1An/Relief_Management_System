@@ -30,6 +30,10 @@ model User {
   name         String
   passwordHash String
   role         Role       @default(STAFF)
+  /// Deactivated users can't sign in and existing sessions stop working immediately.
+  active       Boolean    @default(true)
+  /// Set when an admin creates the account or resets the password; cleared when the user picks their own.
+  mustChangePassword Boolean @default(false)
   createdAt    DateTime   @default(now())
   auditLogs    AuditLog[]
 }

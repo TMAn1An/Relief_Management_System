@@ -27,7 +27,7 @@ async function loginImpl(_: ActionState, formData: FormData): Promise<ActionStat
 
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
   const valid = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
-  if (!user || !valid) return { message: "Incorrect email or password." };
+  if (!user || !user.active || !valid) return { message: "Incorrect email or password." };
 
   await clearRateLimit("login-email", parsed.data.email);
   await createSession(user.id);

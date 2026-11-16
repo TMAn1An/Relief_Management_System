@@ -20,6 +20,7 @@ A web application for running a relief program for **widows, the elderly and peo
 - Statistics: 12-month request chart and per-category breakdown
 - Audit log of every sensitive action; admin-only deletes
 - Account page: change your own password (current password required)
+- Staff page (admin): create staff/admin accounts with a temporary password, deactivate (signs the user out immediately) or reactivate, reset forgotten passwords
 
 ## Business rules (enforced in the database, not just the UI)
 
@@ -71,7 +72,7 @@ Staff can change their own password under **Account**.
 
 Counters live in the database (serverless instances share no memory), as atomic fixed-window upserts: login 10/15 min per IP and 8/15 min per email; applications 5/hour per IP; status checks and monthly requests 10/15 min per IP and per NID; password change 5/15 min per user. Limits fail open if the database errors. Tune them where `rateLimit(...)` is called in `src/app/actions/`.
 
-Known limitation: no email-based *forgotten*-password flow (an admin resets staff passwords).
+Known limitation: no email-based *forgotten*-password flow — an admin resets a staff member's password under **Staff** (they must choose a new one at next sign-in).
 
 ---
 

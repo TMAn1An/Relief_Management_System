@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseClientIp, retryMessage } from "./rate-limit";
+import { blockedMessage, parseClientIp } from "./rate-limit";
+import { makeT } from "./i18n";
 
 const hdr = (o: Record<string, string>) => ({ get: (n: string) => o[n] ?? null });
 
@@ -11,10 +12,11 @@ describe("parseClientIp", () => {
   });
 });
 
-describe("retryMessage", () => {
+describe("blockedMessage", () => {
+  const en = makeT("en");
   it("rounds up to whole minutes", () => {
-    expect(retryMessage(30)).toMatch(/a minute/);
-    expect(retryMessage(61)).toMatch(/2 minutes/);
-    expect(retryMessage(900)).toMatch(/15 minutes/);
+    expect(blockedMessage(en, 30)).toMatch(/a minute/);
+    expect(blockedMessage(en, 61)).toMatch(/2 minutes/);
+    expect(blockedMessage(en, 900)).toMatch(/15 minutes/);
   });
 });

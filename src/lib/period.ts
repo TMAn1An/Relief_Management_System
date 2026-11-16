@@ -41,17 +41,17 @@ export function previousPeriods(count: number, from: string = periodOf()): strin
   return out.reverse();
 }
 
-export function formatPeriod(period: string, style: "long" | "short" = "long"): string {
+export function formatPeriod(period: string, style: "long" | "short" = "long", locale = "en-GB"): string {
   const [y, m] = period.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(locale, {
     month: style,
     year: style === "long" ? "numeric" : "2-digit",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(y, m - 1, 1)));
 }
 
-export function formatDate(date: Date, withTime = false): string {
-  return new Intl.DateTimeFormat("en-GB", {
+export function formatDate(date: Date, withTime = false, locale = "en-GB"): string {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: TZ,
     day: "2-digit",
     month: "short",

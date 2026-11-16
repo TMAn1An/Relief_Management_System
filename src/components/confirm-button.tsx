@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { buttonClass, type ButtonVariant } from "./ui";
+import { useT } from "@/lib/i18n/client";
 
 /** Runs a server action after a native confirm() prompt. */
 export function ConfirmButton({
@@ -17,6 +18,7 @@ export function ConfirmButton({
   variant?: ButtonVariant;
   className?: string;
 }) {
+  const t = useT();
   const [pending, start] = useTransition();
   return (
     <button
@@ -27,7 +29,7 @@ export function ConfirmButton({
         if (window.confirm(message)) start(() => action());
       }}
     >
-      {pending ? "Working…" : children}
+      {pending ? t("common.working") : children}
     </button>
   );
 }

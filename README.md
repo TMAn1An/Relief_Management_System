@@ -22,6 +22,10 @@ A web application for running a relief program for **widows, the elderly and peo
 - Account page: change your own password (current password required)
 - Staff page (admin): create staff/admin accounts with a temporary password, deactivate (signs the user out immediately) or reactivate, reset forgotten passwords
 
+## Languages
+
+The whole UI — public pages, admin, validation and error messages, dates and numbers — is available in **English and Bangla (বাংলা)**. The default follows the browser's `Accept-Language`; the switcher stores the choice in a cookie. Strings live in `src/lib/i18n/en.ts` and `bn.ts`; the Bangla dictionary is type-checked against the English keys, and a test fails if a key, or a `{placeholder}`, is missing in either language. To add a string: add it to both files, then use `t("key")` (`getT()` on the server, `useT()` in client components).
+
 ## Business rules (enforced in the database, not just the UI)
 
 | Rule | How |

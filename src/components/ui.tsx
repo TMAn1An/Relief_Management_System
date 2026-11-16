@@ -2,7 +2,6 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import type { ComponentProps, ReactNode } from "react";
 import type { Status } from "@prisma/client";
-import { STATUS_LABEL } from "@/lib/labels";
 import { AlertCircle, CheckCircle2, Info } from "lucide-react";
 
 const btnBase =
@@ -48,10 +47,10 @@ const statusStyles: Record<Status, string> = {
   REJECTED: "bg-red-50 text-red-800 ring-red-600/20",
 };
 
-export function StatusBadge({ status }: { status: Status }) {
+export function StatusBadge({ status, label }: { status: Status; label: string }) {
   return (
     <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset", statusStyles[status])}>
-      {STATUS_LABEL[status]}
+      {label}
     </span>
   );
 }
@@ -142,7 +141,7 @@ export function Avatar({ recipientId, name, size = 40 }: { recipientId: string; 
     // eslint-disable-next-line @next/next/no-img-element -- photos are small DB-served images
     <img
       src={`/api/photos/${recipientId}`}
-      alt={`Photo of ${name}`}
+      alt={name}
       width={size}
       height={size}
       loading="lazy"

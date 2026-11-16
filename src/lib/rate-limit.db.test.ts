@@ -31,8 +31,8 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 describe("rateLimit through the libSQL adapter", () => {
   it("allows up to the limit and then blocks (does not fail open)", async () => {
     for (let i = 0; i < 3; i++) expect(await rateLimit("t", "a", 3, 60)).toBeNull();
-    expect(await rateLimit("t", "a", 3, 60)).toMatch(/Too many attempts/);
-    expect(await rateLimit("t", "a", 3, 60)).toMatch(/Too many attempts/);
+    expect(await rateLimit("t", "a", 3, 60)).toBeGreaterThan(0);
+    expect(await rateLimit("t", "a", 3, 60)).toBeGreaterThan(0);
   });
 
   it("keeps identifiers independent", async () => {

@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { db } from "./db";
+import type { TFn } from "./i18n";
 
 /** Client IP as set by the hosting proxy (Vercel overwrites x-forwarded-for, so it can't be spoofed by callers). */
 export function parseClientIp(h: { get(name: string): string | null }): string {
@@ -11,20 +12,18 @@ export async function clientIp(): Promise<string> {
   return parseClientIp(await headers());
 }
 
-export function retryMessage(seconds: number): string {
+export function blockedMessage(t: TFn, seconds: number): string {
   const minutes = Math.ceil(seconds / 60);
-  return minutes <= 1
-    ? "Too many attempts. Please wait a minute and try again."
-    : `Too many attempts. Please try again in ${minutes} minutes.`;
+  return minutes <= 1 ? t("m.rate_1") : t("m.rate_n", { minutes });
 }
 
 /**
  * Counts one hit against `scope:identifier` and reports whether it is still within `limit`
  * per `windowSec`. The upsert is a single atomic statement, so concurrent requests can't slip past the limit.
- * Returns a user-facing message when blocked, otherwise null. Fails open if the database errors,
+ * Returns the seconds until the window resets when blocked (see blockedMessage), otherwise null. Fails open if the database errors,
  * so a limiter fault never takes the site down.
  */
-export async function rateLimit(scope: string, identifier: string, limit: number, windowSec: number): Promise<string | null> {
+export async function rateLimit(scope: string, identifier: string, limit: number, windowSec: number): Promise<number | null> {
   const key = `${scope}:${identifier}`;
   // BigInt on purpose: the libSQL adapter binds plain JS numbers as floats (e.g. 1794772385793.0),
   // which breaks integer comparison and read-back.
@@ -40,7 +39,7 @@ export async function rateLimit(scope: string, identifier: string, limit: number
     // Housekeeping: occasionally drop expired windows so the table stays small.
     if (Math.random() < 0.02) await db.rateLimit.deleteMany({ where: { resetAt: { lte: now } } });
     const count = Number(rows[0]?.count ?? 0);
-    if (count > limit) return retryMessage(Math.max(1, Math.ceil((Number(rows[0].resetAt) - Number(now)) / 1000)));
+    if (count > limit) return Math.max(1, Math.ceil((Number(rows[0].resetAt) - Number(now)) / 1000));
     return null;
   } catch (e) {
     console.error("rateLimit failed open", e);
